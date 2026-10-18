@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from django.templatetags.static import static
 import os
 
 load_dotenv()
@@ -23,6 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Application definition
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters", 
+    "unfold.contrib.forms",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -108,6 +112,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 
 # Email
@@ -116,5 +121,31 @@ STATIC_URL = 'static/'
 MAILERS = {
     'default': {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    },
+}
+
+UNFOLD = {
+    "SITE_TITLE": "Sistema de Estoque",
+    "SITE_HEADER": "Avance Construtora",
+    "SITE_ICON": lambda request: static("img/icone_avance.png"),
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": ("Navegação"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": ("Painel"),
+                        "icon": "dashboard",
+                    },
+                    {
+                        "title": ("Produtos"),
+                        "icon": "inventory_2",
+                    },
+                ],
+            },
+        ],
     },
 }

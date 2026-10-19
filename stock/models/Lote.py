@@ -16,7 +16,8 @@ class Lote(models.Model):
         ordering = ["data_entrada", "id"]  # mais antigo primeiro (útil para baixa PEPS)
 
     def __str__(self):
-        return f"{self.estoque} | NF {self.nf or '-'} | {self.data_entrada:%d/%m/%Y}"
+        return (f"{self.estoque} | NF {self.nf or '-'} | {self.estoque.produto.codigo} | "f"{self.data_entrada:%d/%m/%Y}"
+    )
 
     def save(self, *args, **kwargs):
         if self._state.adding:

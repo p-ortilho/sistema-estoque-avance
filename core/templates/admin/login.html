@@ -1,0 +1,112 @@
+{% load i18n static %}<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE|default:'pt-br' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Entrar | {{ site_title|default:"Sistema de Estoque" }}</title>
+
+    {% for favicon in site_favicons %}
+        <link rel="{{ favicon.rel }}" href="{{ favicon.href }}"{% if favicon.type %} type="{{ favicon.type }}"{% endif %}{% if favicon.sizes %} sizes="{{ favicon.sizes }}"{% endif %}>
+    {% endfor %}
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'login/login.css' %}">
+    <script src="{% static 'login/login.js' %}" defer></script>
+</head>
+<body>
+<main class="tela">
+
+    {# ===== Painel da marca: edite os textos abaixo ===== #}
+    <section class="marca" aria-label="Avance Construtora">
+        <p class="marca__empresa">Avance Construtora</p>
+
+        <div class="marca__conteudo">
+            <h1 class="marca__titulo">Sistema<br>de Estoque</h1>
+            <p class="marca__texto">Entradas por lote, aplicação em equipamentos e transferências entre filiais.</p>
+        </div>
+    </section>
+
+    {# ===== Formulário ===== #}
+    <section class="acesso">
+        <div class="acesso__conteudo">
+            <h2 class="acesso__titulo">Entrar</h2>
+            <p class="acesso__instrucao">Use o usuário e a senha cadastrados pelo administrador do sistema.</p>
+
+            {% if form.non_field_errors or user.is_authenticated %}
+                <div class="aviso" role="alert">
+                    {% for erro in form.non_field_errors %}
+                        <p>{{ erro }}</p>
+                    {% endfor %}
+                    {% if user.is_authenticated and not form.non_field_errors %}
+                        <p>Você entrou como {{ user.get_username }}, mas esse usuário não tem acesso a esta página. Entre com outra conta.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <form action="{{ app_path }}" method="post" id="login-form" novalidate>
+                {% csrf_token %}
+
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="campo">
+                    <label for="{{ form.username.id_for_label }}">Usuário</label>
+                    <div class="campo__entrada">
+                        <input
+                            type="text"
+                            name="{{ form.username.html_name }}"
+                            id="{{ form.username.id_for_label }}"
+                            value="{{ form.username.value|default:'' }}"
+                            autocomplete="username"
+                            autocapitalize="none"
+                            spellcheck="false"
+                            required
+                            autofocus
+                            {% if form.username.errors %}aria-invalid="true" aria-describedby="erro-usuario"{% endif %}>
+                    </div>
+                    {% if form.username.errors %}
+                        <p class="campo__erro" id="erro-usuario">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="campo campo--senha">
+                    <label for="{{ form.password.id_for_label }}">Senha</label>
+                    <div class="campo__entrada">
+                        <input
+                            type="password"
+                            name="{{ form.password.html_name }}"
+                            id="{{ form.password.id_for_label }}"
+                            autocomplete="current-password"
+                            required
+                            {% if form.password.errors %}aria-invalid="true" aria-describedby="erro-senha"{% endif %}>
+                        <button type="button" class="mostrar-senha" aria-controls="{{ form.password.id_for_label }}" aria-pressed="false">Mostrar</button>
+                    </div>
+                    {% if form.password.errors %}
+                        <p class="campo__erro" id="erro-senha">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="botao">Entrar</button>
+            </form>
+
+            {% url 'admin_password_reset' as password_reset_url %}
+            {% if password_reset_url or site_url %}
+                <nav class="links" aria-label="Outros links">
+                    {% if password_reset_url %}
+                        <a href="{{ password_reset_url }}">Esqueci minha senha</a>
+                    {% endif %}
+                    {% if site_url %}
+                        <a href="{{ site_url }}">Voltar ao site da Avance</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+
+        </div>
+    </section>
+</main>
+</body>
+</html>

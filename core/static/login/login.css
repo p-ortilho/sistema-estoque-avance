@@ -1,0 +1,286 @@
+/* ==========================================================
+   Tela de login — Avance Construtora
+   Cores da marca: troque aqui se a identidade mudar.
+   ========================================================== */
+:root {
+    --vermelho: #EB2227;        /* cor principal da Avance */
+    --vermelho-escuro: #A11F1E; /* faixas do painel */
+    --vermelho-hover: #C41C1F;
+    --concreto: #E9EBEE;        /* fundo do lado do formulário */
+    --tinta: #1E2329;           /* texto principal */
+    --aco: #5B6470;             /* texto secundário */
+    --linha: #C9CED5;           /* bordas dos campos */
+    --campo: #FFFFFF;
+    --erro-fundo: #FEF3F1;
+    --erro-texto: #A11F1E;
+
+    --fonte-titulo: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    --fonte-texto: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --concreto: #1B1F24;
+        --tinta: #ECEEF1;
+        --aco: #A3ABB6;
+        --linha: #3A414B;
+        --campo: #242930;
+        --erro-fundo: #3A1716;
+        --erro-texto: #FEABA2;
+    }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+    font-family: var(--fonte-texto);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--tinta);
+    background: var(--concreto);
+    -webkit-font-smoothing: antialiased;
+}
+
+.tela {
+    display: grid;
+    grid-template-columns: minmax(0, 46fr) minmax(0, 54fr);
+    min-height: 100vh;
+}
+
+/* ---------- Painel da marca ---------- */
+.marca {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 56px 18% 48px 56px;
+    color: #FFFFFF;
+    background: var(--vermelho);
+    /* borda direita cortada na diagonal */
+    clip-path: polygon(0 0, 100% 0, 84% 100%, 0 100%);
+}
+
+/* duas faixas mais escuras que repetem o corte diagonal */
+.marca::before,
+.marca::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--vermelho-escuro);
+    pointer-events: none;
+}
+.marca::before {
+    opacity: .35;
+    clip-path: polygon(62% 0, 78% 0, 50% 100%, 34% 100%);
+}
+.marca::after {
+    opacity: .22;
+    clip-path: polygon(82% 0, 100% 0, 84% 100%, 66% 100%);
+}
+
+.marca > * { position: relative; z-index: 1; }
+
+.marca__empresa {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.0625rem;
+    letter-spacing: .01em;
+}
+
+.marca__conteudo { margin: auto 0; }
+
+.marca__titulo {
+    margin: 0 0 20px;
+    font-family: var(--fonte-titulo);
+    font-weight: 700;
+    font-size: clamp(3rem, 6.2vw, 5.75rem);
+    line-height: .92;
+    letter-spacing: -.01em;
+}
+
+.marca__texto {
+    margin: 0;
+    max-width: 30ch;
+    font-size: 1.125rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, .88);
+}
+
+/* ---------- Formulário ---------- */
+.acesso {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 48px clamp(24px, 8vw, 120px);
+}
+
+.acesso__conteudo {
+    width: 100%;
+    max-width: 400px;
+}
+
+.acesso__titulo {
+    margin: 0 0 6px;
+    font-family: var(--fonte-titulo);
+    font-weight: 600;
+    font-size: 2.25rem;
+    line-height: 1.1;
+}
+
+.acesso__instrucao {
+    margin: 0 0 32px;
+    color: var(--aco);
+}
+
+.aviso {
+    margin: 0 0 24px;
+    padding: 12px 16px;
+    border-left: 4px solid var(--vermelho);
+    border-radius: 4px;
+    background: var(--erro-fundo);
+    color: var(--erro-texto);
+    font-weight: 500;
+}
+.aviso p { margin: 0; }
+.aviso p + p { margin-top: 6px; }
+
+.campo { margin-bottom: 20px; }
+
+.campo label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.campo__entrada {
+    position: relative;
+}
+
+.campo input {
+    width: 100%;
+    height: 50px;
+    padding: 0 16px;
+    border: 1.5px solid var(--linha);
+    border-radius: 6px;
+    background: var(--campo);
+    color: var(--tinta);
+    font: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.campo input:hover { border-color: var(--aco); }
+
+.campo input:focus {
+    outline: none;
+    border-color: var(--vermelho);
+    box-shadow: 0 0 0 3px rgba(235, 34, 39, .22);
+}
+
+.campo input[aria-invalid="true"] { border-color: var(--vermelho); }
+
+.campo--senha input { padding-right: 92px; }
+
+.mostrar-senha {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--aco);
+    font: inherit;
+    font-size: .875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+.mostrar-senha:hover { color: var(--tinta); }
+.mostrar-senha:focus-visible {
+    outline: 2px solid var(--vermelho);
+    outline-offset: 1px;
+}
+
+.campo__erro {
+    margin: 6px 0 0;
+    color: var(--erro-texto);
+    font-size: .875rem;
+}
+
+.botao {
+    width: 100%;
+    height: 52px;
+    margin-top: 8px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--vermelho);
+    color: #FFFFFF;
+    font-family: var(--fonte-titulo);
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: .02em;
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+.botao:hover { background: var(--vermelho-hover); }
+.botao:focus-visible {
+    outline: 3px solid var(--tinta);
+    outline-offset: 2px;
+}
+.botao[disabled] { opacity: .7; cursor: progress; }
+
+.links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px 24px;
+    margin-top: 24px;
+    font-size: .9375rem;
+}
+
+.links a {
+    color: var(--aco);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 3px;
+    transition: color .15s ease, text-decoration-color .15s ease;
+}
+.links a:hover {
+    color: var(--tinta);
+    text-decoration-color: currentColor;
+}
+.links a:focus-visible {
+    outline: 2px solid var(--vermelho);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* ---------- Celular e tablet ---------- */
+@media (max-width: 860px) {
+    .tela {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    .marca {
+        padding: 28px 24px 56px;
+        gap: 28px;
+        clip-path: polygon(0 0, 100% 0, 100% 78%, 0 100%);
+    }
+    .marca::before { clip-path: polygon(70% 0, 82% 0, 70% 100%, 58% 100%); }
+    .marca::after  { clip-path: polygon(86% 0, 100% 0, 100% 100%, 76% 100%); }
+
+    .marca__titulo { font-size: 2.75rem; margin-bottom: 10px; }
+    .marca__texto { font-size: 1rem; }
+        .acesso {
+        justify-content: flex-start;
+        padding: 32px 24px 48px;
+    }
+    .acesso__conteudo { margin: 0 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+}

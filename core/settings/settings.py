@@ -14,6 +14,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from django.templatetags.static import static
 import os
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 load_dotenv()
 
@@ -33,7 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'stock'
+    'stock',
+    'accounts'
 ]
 
 MIDDLEWARE = [
@@ -48,10 +51,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
+LOGIN_REDIRECT_URL = "admin:index"  
+LOGOUT_REDIRECT_URL = "admin:login"
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        "DIRS": [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -128,24 +134,122 @@ UNFOLD = {
     "SITE_TITLE": "Sistema de Estoque",
     "SITE_HEADER": "Avance Construtora",
     "SITE_ICON": lambda request: static("img/icone_avance.png"),
+            "DASHBOARD_CALLBACK": "core.dashboard.dashboard_callback",
     "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": True,
+        "show_search": False,
+        "show_all_applications": False,
         "navigation": [
             {
-                "title": ("Navegação"),
-                "separator": True,
+                "title": _("Início"),
                 "items": [
                     {
-                        "title": ("Painel"),
-                        "icon": "dashboard",
+                        "title": _("Dashboard"),
+                        "icon": "monitoring",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                ],
+            },
+            {
+                "title": _("Cadastros"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Filiais"),
+                        "icon": "store",
+                        "link": reverse_lazy("admin:stock_filial_changelist"),
                     },
                     {
-                        "title": ("Produtos"),
+                        "title": _("Produtos"),
                         "icon": "inventory_2",
+                        "link": reverse_lazy("admin:stock_produto_changelist"),
+                    },
+                    {
+                        "title": _("Equipamentos"),
+                        "icon": "construction",
+                        "link": reverse_lazy("admin:stock_equipamento_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Estoque"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Estoques"),
+                        "icon": "warehouse",
+                        "link": reverse_lazy("admin:stock_estoque_changelist"),
+                    },
+                    {
+                        "title": _("Lotes"),
+                        "icon": "package_2",
+                        "link": reverse_lazy("admin:stock_lote_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Movimentações"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Aplicações em equipamentos"),
+                        "icon": "build",
+                        "link": reverse_lazy("admin:stock_aplicacaoestoque_changelist"),
+                    },
+                    {
+                        "title": _("Transferências"),
+                        "icon": "local_shipping",
+                        "link": reverse_lazy("admin:stock_transferenciaestoque_changelist"),
+                    },
+                    {
+                        "title": _("Consumo geral"),
+                        "icon": "category",
+                        "link": reverse_lazy("admin:stock_consumogeral_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Administração"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Usuários"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Grupos"),
+                        "icon": "group",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Perfis"),
+                        "icon": "badge",
+                        "link": reverse_lazy("admin:accounts_perfil_changelist"),
+                        "permission": lambda request: request.user.is_superuser,
                     },
                 ],
             },
         ],
     },
+    "COLORS": {
+        "primary": {
+            "50": "#FEF3F1",
+            "100": "#FEE5E2",
+            "200": "#FECFC9",
+            "300": "#FEABA2",
+            "400": "#FE7468",
+            "500": "#FD433E",
+            "600": "#EB2227",  # a cor da Avance
+            "700": "#C41C1F",
+            "800": "#A11F1E",
+            "900": "#84231F",
+            "950": "#470E0C",
+        },
+    }
 }

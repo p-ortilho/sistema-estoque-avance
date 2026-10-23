@@ -1,0 +1,102 @@
+{% extends 'admin/base.html' %}
+{% load i18n unfold %}
+
+{# Dashboard: só usa componentes do Unfold. Os dados vêm de stock/dashboard.py #}
+
+{% block title %}Dashboard | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+{% if not cards %}
+    {# Aparece só se o DASHBOARD_CALLBACK não estiver configurado no UNFOLD (settings.py) #}
+    {% component "unfold/components/card.html" with title="Dashboard sem dados" %}
+        {% component "unfold/components/text.html" %}Os dados do dashboard não foram carregados. Confira se "DASHBOARD_CALLBACK": "stock.dashboard.dashboard_callback" está no UNFOLD do settings.py, fora do "SIDEBAR".{% endcomponent %}
+    {% endcomponent %}
+{% else %}
+<div class="flex flex-col gap-6">
+
+    {# ---------- Cards ---------- #}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {% for card in cards %}
+            {% if card.alerta %}
+                {% component "unfold/components/card.html" with href=card.link label="Atenção" %}
+                    {% component "unfold/components/text.html" %}{{ card.titulo }}{% endcomponent %}
+                    {% component "unfold/components/title.html" with class="text-3xl mt-1" %}{{ card.valor }}{% endcomponent %}
+                    {% component "unfold/components/text.html" with class="text-subtle mt-1" %}{{ card.detalhe }}{% endcomponent %}
+                {% endcomponent %}
+            {% else %}
+                {% component "unfold/components/card.html" with href=card.link %}
+                    {% component "unfold/components/text.html" %}{{ card.titulo }}{% endcomponent %}
+                    {% component "unfold/components/title.html" with class="text-3xl mt-1" %}{{ card.valor }}{% endcomponent %}
+                    {% component "unfold/components/text.html" with class="text-subtle mt-1" %}{{ card.detalhe }}{% endcomponent %}
+                {% endcomponent %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    {# ---------- Linha: valor aplicado por dia ---------- #}
+    {% component "unfold/components/card.html" with title="Valor aplicado por dia" description="Total dos últimos 30 dias: "|add:total_aplicado_30d %}
+        {% if tem_aplicacoes %}
+            {% component "unfold/components/chart/line.html" with data=grafico_aplicado height=300 %}{% endcomponent %}
+        {% else %}
+            {% component "unfold/components/text.html" with class="text-subtle" %}Nenhuma aplicação em equipamentos nos últimos 30 dias.{% endcomponent %}
+        {% endif %}
+    {% endcomponent %}
+
+    {# ---------- Pizzas por categoria + tabela com os números ---------- #}
+    {% if tem_categorias %}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {% component "unfold/components/card.html" with title="Valor por categoria" description="Saldo atual dos lotes" %}
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas class="chart" data-type="pie" data-value="{{ grafico_valor_categoria }}" data-options="{{ opcoes_pizza }}"></canvas>
+                </div>
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" with title="Quantidade por categoria" description="Unidades em estoque" %}
+                <div class="relative w-full" style="height: 300px;">
+                    <canvas class="chart" data-type="pie" data-value="{{ grafico_qtd_categoria }}" data-options="{{ opcoes_pizza }}"></canvas>
+                </div>
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" with title="Categorias em números" %}
+                {% component "unfold/components/table.html" with table=tabela_categorias card_included=1 striped=1 %}{% endcomponent %}
+            {% endcomponent %}
+        </div>
+    {% else %}
+        {% component "unfold/components/card.html" with title="Estoque por categoria" %}
+            {% component "unfold/components/text.html" with class="text-subtle" %}Ainda não há lotes com saldo. Os gráficos aparecem depois da primeira entrada.{% endcomponent %}
+        {% endcomponent %}
+    {% endif %}
+
+    {# ---------- Top 10 equipamentos com mais aplicações ---------- #}
+    {% if tem_equipamentos %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {% component "unfold/components/card.html" with title="Top 10 equipamentos com mais aplicações" description="Todas as aplicações registradas" %}
+                {% component "unfold/components/chart/bar.html" with data=grafico_equipamentos options=opcoes_equipamentos height=360 %}{% endcomponent %}
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" with title="Ranking em números" %}
+                {% component "unfold/components/table.html" with table=tabela_equipamentos card_included=1 striped=1 %}{% endcomponent %}
+            {% endcomponent %}
+        </div>
+    {% else %}
+        {% component "unfold/components/card.html" with title="Top 10 equipamentos com mais aplicações" %}
+            {% component "unfold/components/text.html" with class="text-subtle" %}Nenhuma aplicação em equipamentos registrada ainda.{% endcomponent %}
+        {% endcomponent %}
+    {% endif %}
+
+    {# ---------- Barras: valor por filial ---------- #}
+    {% component "unfold/components/card.html" with title="Valor em estoque por filial" %}
+        {% if tem_filiais %}
+            {% component "unfold/components/chart/bar.html" with data=grafico_filiais height=300 %}{% endcomponent %}
+        {% else %}
+            {% component "unfold/components/text.html" with class="text-subtle" %}Ainda não há lotes com saldo.{% endcomponent %}
+        {% endif %}
+    {% endcomponent %}
+
+</div>
+{% endif %}
+{% endblock %}

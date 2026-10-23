@@ -14,12 +14,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from stock.admin import filiais_do_usuario, formatar_reais
-from stock.models import AplicacaoEstoque, Estoque, Lote, Produto, TransferenciaEstoque
+from stock.models import AplicacaoEstoque, ConsumoGeral, Estoque, Lote, Produto, TransferenciaEstoque
 
 DINHEIRO = DecimalField(max_digits=16, decimal_places=2)
 
 # Cores das pizzas (paleta categórica validada para daltonismo), sempre na mesma ordem.
 # O vermelho da marca fica para os gráficos de uma série só (linha e barras).
+COR_CONSUMO_GERAL = "#2a78d6"  # 2ª linha do gráfico diário (validada junto com o vermelho)
 CORES_CATEGORIAS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#6250d6"]
 COR_OUTROS = "#9ca3af"
 MAX_CATEGORIAS = 6  # o restante vira "Outros"
@@ -46,11 +47,13 @@ def dashboard_callback(request, context):
     lotes = Lote.objects.filter(quantidade_atual__gt=0)
     estoques = Estoque.objects.all()
     aplicacoes = AplicacaoEstoque.objects.all()
+    consumos = ConsumoGeral.objects.all()
     transferencias = TransferenciaEstoque.objects.filter(status="pendente")
     if filiais is not None:
         lotes = lotes.filter(estoque__filial__in=filiais)
         estoques = estoques.filter(filial__in=filiais)
         aplicacoes = aplicacoes.filter(lote__estoque__filial__in=filiais)
+        consumos = consumos.filter(lote__estoque__filial__in=filiais)
         transferencias = transferencias.filter(
             Q(filial_origem__in=filiais) | Q(filial_destino__in=filiais)
         )
@@ -106,32 +109,80 @@ def dashboard_callback(request, context):
         timezone.datetime.combine(primeiro_dia, timezone.datetime.min.time())
     )
 
-    por_dia = dict(
-        aplicacoes.filter(data_aplicacao__gte=inicio)
-        .annotate(dia=TruncDate("data_aplicacao", tzinfo=timezone.get_current_timezone()))
-        .values("dia")
-        .annotate(
-            total=Sum(
-                ExpressionWrapper(F("quantidade") * F("preco_unitario_aplicado"), output_field=DINHEIRO)
+    def soma_por_dia(queryset, campo_data):
+        """{dia: valor} de um queryset de saídas (aplicações ou consumos)."""
+        return dict(
+            queryset.filter(**{f"{campo_data}__gte": inicio})
+            .annotate(dia=TruncDate(campo_data, tzinfo=timezone.get_current_timezone()))
+            .values("dia")
+            .annotate(
+                total=Sum(
+                    ExpressionWrapper(F("quantidade") * F("preco_unitario_aplicado"), output_field=DINHEIRO)
+                )
             )
+            .values_list("dia", "total")
         )
-        .values_list("dia", "total")
-    )
+
+    aplicado_por_dia = soma_por_dia(aplicacoes, "data_aplicacao")
+    consumo_por_dia = soma_por_dia(consumos, "data_consumo")
+
     dias = [primeiro_dia + timedelta(days=i) for i in range(30)]
-    total_aplicado_30d = sum((por_dia.get(d) or 0 for d in dias), Decimal("0"))
+    total_equipamentos_30d = sum((aplicado_por_dia.get(d) or 0 for d in dias), Decimal("0"))
+    total_consumo_30d = sum((consumo_por_dia.get(d) or 0 for d in dias), Decimal("0"))
+    total_aplicado_30d = total_equipamentos_30d + total_consumo_30d
 
     grafico_aplicado = {
         "labels": [d.strftime("%d/%m") for d in dias],
         "datasets": [
             {
-                "label": "Valor aplicado (R$)",
-                "data": [float(por_dia.get(d) or 0) for d in dias],
+                "label": "Equipamentos",
+                "data": [float(aplicado_por_dia.get(d) or 0) for d in dias],
                 "borderColor": "var(--color-primary-600)",
                 "backgroundColor": "var(--color-primary-600)",
-                "displayYAxis": True,
-                "maxTicksXLimit": 10,
-            }
+                "borderWidth": 2,
+                "pointRadius": 0,
+                "pointHoverRadius": 4,
+            },
+            {
+                "label": "Consumo geral",
+                "data": [float(consumo_por_dia.get(d) or 0) for d in dias],
+                "borderColor": COR_CONSUMO_GERAL,
+                "backgroundColor": COR_CONSUMO_GERAL,
+                "borderWidth": 2,
+                "pointRadius": 0,
+                "pointHoverRadius": 4,
+            },
         ],
+    }
+    # Com duas linhas, a legenda precisa aparecer; as opções padrão do Unfold
+    # escondem a legenda, por isso este gráfico recebe as suas próprias.
+    opcoes_aplicado = {
+        "locale": "pt-BR",  # números no formato brasileiro (20.000)
+        "responsive": True,
+        "maintainAspectRatio": False,
+        "animation": False,
+        "interaction": {"mode": "index", "intersect": False},  # dica mostra as 2 linhas do dia
+        "plugins": {
+            "legend": {
+                "display": True,
+                "position": "top",
+                "align": "end",
+                "labels": {"usePointStyle": True, "pointStyle": "circle", "boxWidth": 8, "boxHeight": 8, "color": "#6b7280"},
+            }
+        },
+        "scales": {
+            "x": {
+                "ticks": {"color": "#9ca3af", "maxTicksLimit": 10},
+                "grid": {"display": False},
+                "border": {"display": False},
+            },
+            "y": {
+                "beginAtZero": True,
+                "ticks": {"color": "#9ca3af"},
+                "grid": {"color": "rgba(156, 163, 175, .25)"},
+                "border": {"display": False},
+            },
+        },
     }
 
     # ------------------------------------------------------------------
@@ -234,6 +285,7 @@ def dashboard_callback(request, context):
     # Barras deitadas (nomes legíveis à esquerda). As opções padrão do Unfold
     # são para barras em pé, por isso este gráfico recebe as suas próprias.
     opcoes_equipamentos = {
+        "locale": "pt-BR",  # números no formato brasileiro (20.000)
         "indexAxis": "y",
         "responsive": True,
         "maintainAspectRatio": False,
@@ -266,7 +318,13 @@ def dashboard_callback(request, context):
             "title": "Dashboard",  # texto do cabeçalho da página
             "cards": cards,
             "total_aplicado_30d": formatar_reais(total_aplicado_30d),
+            "resumo_aplicado_30d": (
+                f"Total dos últimos 30 dias: {formatar_reais(total_aplicado_30d)} "
+                f"(equipamentos {formatar_reais(total_equipamentos_30d)}, "
+                f"consumo geral {formatar_reais(total_consumo_30d)})"
+            ),
             "grafico_aplicado": json.dumps(grafico_aplicado),
+            "opcoes_aplicado": json.dumps(opcoes_aplicado),
             "tem_aplicacoes": total_aplicado_30d > 0,
             "grafico_valor_categoria": json.dumps(pizza("Valor (R$)", valores)),
             "grafico_qtd_categoria": json.dumps(pizza("Quantidade", quantidades)),

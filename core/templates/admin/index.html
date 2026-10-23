@@ -38,11 +38,11 @@
     </div>
 
     {# ---------- Linha: valor aplicado por dia ---------- #}
-    {% component "unfold/components/card.html" with title="Valor aplicado por dia" description="Total dos últimos 30 dias: "|add:total_aplicado_30d %}
+    {% component "unfold/components/card.html" with title="Valor aplicado por dia" description=resumo_aplicado_30d %}
         {% if tem_aplicacoes %}
-            {% component "unfold/components/chart/line.html" with data=grafico_aplicado height=300 %}{% endcomponent %}
+            {% component "unfold/components/chart/line.html" with data=grafico_aplicado options=opcoes_aplicado height=300 %}{% endcomponent %}
         {% else %}
-            {% component "unfold/components/text.html" with class="text-subtle" %}Nenhuma aplicação em equipamentos nos últimos 30 dias.{% endcomponent %}
+            {% component "unfold/components/text.html" with class="text-subtle" %}Nenhuma aplicação em equipamentos nem consumo geral nos últimos 30 dias.{% endcomponent %}
         {% endif %}
     {% endcomponent %}
 

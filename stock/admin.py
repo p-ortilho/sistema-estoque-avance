@@ -106,10 +106,19 @@ class LoteInline(TabularInline):
     ordering = ("-data_entrada", "-id")  # entradas mais recentes no topo
     show_change_link = True  # link para abrir o lote na tela própria
 
+    def has_delete_permission(self, request, obj=None):
+        # Excluir lote: só superusuário (lotes com movimentações continuam protegidos)
+        return request.user.is_superuser
+
 
 @admin.register(Estoque)
 class EstoqueAdmin(FiltroPorFilialMixin, ModelAdmin):
     campo_filial = "filial"
+
+    def has_delete_permission(self, request, obj=None):
+        # Excluir estoque: só superusuário. Se ainda tiver lotes, o Django bloqueia
+        # e lista os lotes que precisam ser excluídos antes (on_delete=PROTECT).
+        return request.user.is_superuser
     inlines = [LoteInline]
 
     list_display = (
@@ -190,6 +199,11 @@ class EstoqueAdmin(FiltroPorFilialMixin, ModelAdmin):
 @admin.register(Lote)
 class LoteAdmin(FiltroPorFilialMixin, ModelAdmin):
     campo_filial = "estoque__filial"
+
+    def has_delete_permission(self, request, obj=None):
+        # Excluir lote: só superusuário. Se tiver aplicações, consumos ou transferências,
+        # o Django bloqueia e lista o que precisa ser excluído antes (on_delete=PROTECT).
+        return request.user.is_superuser
     list_display = (
         "data_entrada",
         "estoque",
@@ -510,10 +524,30 @@ class TransferenciaEstoqueAdmin(LoteComSaldoMixin, ModelAdmin):
         return self.campos_informativos
 
     def has_delete_permission(self, request, obj=None):
-        # Só a filial de origem exclui, e só enquanto estiver pendente
-        if obj and (obj.status != "pendente" or not self._eh_da_origem(request.user, obj)):
-            return False
-        return super().has_delete_permission(request, obj)
+        # Excluir transferência: só superusuário (qualquer status).
+        # Os demais usuários continuam usando "Cancelar transferência" nas pendentes.
+        return request.user.is_superuser
+
+    def delete_view(self, request, object_id, extra_context=None):
+        transferencia = self.get_object(request, object_id)
+        if transferencia is not None and request.user.is_superuser:
+            url_da_transferencia = reverse("admin:stock_transferenciaestoque_change", args=[object_id])
+            problemas = transferencia.impedimentos_para_excluir()
+            if problemas:
+                messages.error(
+                    request,
+                    "Não é possível excluir esta transferência: " + "; ".join(problemas)
+                    + ". Exclua essas movimentações do lote recebido antes.",
+                )
+                return redirect(url_da_transferencia)
+            if request.method == "GET" and transferencia.status == "confirmada":
+                messages.warning(
+                    request,
+                    f"Ao confirmar, {transferencia.quantidade} un. voltam para o lote de origem "
+                    f"({transferencia.filial_origem.nome}) e o lote criado em "
+                    f"{transferencia.filial_destino.nome} será excluído.",
+                )
+        return super().delete_view(request, object_id, extra_context)
 
     def get_actions(self, request):
         actions = super().get_actions(request)

@@ -3,6 +3,7 @@ from django.db import models
 class Produto(models.Model):
     CATEGORIA_CHOICES = [
         ("filtro", "Filtro"),
+        ("filtro_combustivel", "Filtro de Combustível"),
         ("oleo", "Óleo"),
         ("pecas", "Peças"),
         ("outro", "Outro"),
@@ -19,4 +20,4 @@ class Produto(models.Model):
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
 
     def __str__(self):
-        return f"{self.codigo} - {self.nome}"
+        return f"{self.codigo} - {self.nome} - {self.categoria}"

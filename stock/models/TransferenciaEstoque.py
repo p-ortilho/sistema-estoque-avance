@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import F
 from django.utils import timezone
 
 from stock.models.Estoque import Estoque
@@ -201,3 +202,60 @@ class TransferenciaEstoque(models.Model):
 
         self.refresh_from_db()
         return self
+
+
+    # ------------------------------------------------------------------
+    # Exclusão (só superusuário, controlado no admin)
+    # ------------------------------------------------------------------
+    def impedimentos_para_excluir(self):
+        """
+        Lista o que impede excluir esta transferência (lista vazia = pode excluir).
+        Só a confirmada tem impedimentos: o lote criado no destino precisa estar intacto,
+        senão desfazer a transferência deixaria aplicações/consumos sem origem.
+        """
+        if self.status != "confirmada" or not self.lote_destino_id:
+            return []
+        lote = Lote.objects.get(pk=self.lote_destino_id)
+        problemas = []
+        for relacao, nome in (
+            ("aplicacoes", "aplicação(ões) em equipamento"),
+            ("consumos_gerais", "consumo(s) geral(is)"),
+            ("transferencias_saida", "transferência(s) para outra filial"),
+        ):
+            gerenciador = getattr(lote, relacao, None)
+            total = gerenciador.count() if gerenciador is not None else 0
+            if total:
+                problemas.append(f"o lote recebido no destino já tem {total} {nome}")
+        if not problemas and lote.quantidade_atual != lote.quantidade_entrada:
+            problemas.append(
+                f"o saldo do lote recebido no destino mudou "
+                f"({lote.quantidade_atual} de {lote.quantidade_entrada})"
+            )
+        return problemas
+
+    def delete(self, *args, **kwargs):
+        """
+        Pendente/cancelada: só apaga o registro (não mexeu no estoque).
+        Confirmada: desfaz — devolve a quantidade ao lote de origem e apaga o lote do destino.
+        """
+        with transaction.atomic():
+            atual = TransferenciaEstoque.objects.select_for_update().get(pk=self.pk)
+            problemas = atual.impedimentos_para_excluir()
+            if problemas:
+                raise ValidationError(
+                    "Não é possível excluir esta transferência: " + "; ".join(problemas) + "."
+                )
+
+            lote_destino = None
+            if atual.status == "confirmada":
+                # Trava os dois lotes envolvidos antes de mexer nos saldos
+                list(Lote.objects.select_for_update().filter(pk__in=[atual.lote_id, atual.lote_destino_id]))
+                Lote.objects.filter(pk=atual.lote_id).update(
+                    quantidade_atual=F("quantidade_atual") + atual.quantidade
+                )
+                lote_destino = atual.lote_destino
+
+            resultado = super().delete(*args, **kwargs)  # a transferência sai primeiro (ela protege o lote)
+            if lote_destino is not None:
+                lote_destino.delete()
+            return resultado
